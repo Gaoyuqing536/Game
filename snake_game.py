@@ -17,7 +17,6 @@ HEIGHT = 480
 GRID_SIZE = 20
 GRID_WIDTH = WIDTH // GRID_SIZE
 GRID_HEIGHT = HEIGHT // GRID_SIZE
-SNAKE_SPEED = 10
 
 # 设置显示窗口
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -47,18 +46,14 @@ class Snake:
         elif self.direction == pygame.K_RIGHT:
             x += GRID_SIZE
 
-        if x < 0:
-            x = WIDTH - GRID_SIZE
-        elif x >= WIDTH:
-            x = 0
-        if y < 0:
-            y = HEIGHT - GRID_SIZE
-        elif y >= HEIGHT:
-            y = 0
+        # 检查是否碰到墙壁
+        if x < 0 or x >= WIDTH or y < 0 or y >= HEIGHT:
+            return False
 
         self.positions.insert(0, (x, y))
         if len(self.positions) > self.length:
             self.positions.pop()
+        return True
 
     def draw(self, surface):
         for p in self.positions:
@@ -93,8 +88,39 @@ class Food:
     def draw(self, surface):
         pygame.draw.rect(surface, self.color, (self.position[0], self.position[1], GRID_SIZE, GRID_SIZE))
 
+# 设置速度选择界面
+def choose_speed():
+    font = pygame.font.Font(None, 36)
+    speeds = [5, 10, 15, 20, 25]
+    selected = 2  # 默认选择中等速度
+
+    while True:
+        screen.fill(BLACK)
+        title = font.render('选择蛇的移动速度', True, WHITE)
+        screen.blit(title, (WIDTH // 2 - 100, 50))
+
+        for i, speed in enumerate(speeds):
+            color = RED if i == selected else WHITE
+            text = font.render(f'{speed}', True, color)
+            screen.blit(text, (WIDTH // 2 - 50 + i * 50, HEIGHT // 2))
+
+        pygame.display.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT and selected > 0:
+                    selected -= 1
+                elif event.key == pygame.K_RIGHT and selected < len(speeds) - 1:
+                    selected += 1
+                elif event.key == pygame.K_RETURN:
+                    return speeds[selected]
+
 # 主游戏函数
 def main():
+    snake_speed = choose_speed()
     clock = pygame.time.Clock()
     snake = Snake()
     food = Food()
@@ -103,7 +129,8 @@ def main():
 
     while True:
         snake.handle_keys()
-        snake.move()
+        if not snake.move():
+            break
         
         if snake.get_head_position() == food.position:
             snake.length += 1
@@ -121,14 +148,16 @@ def main():
         
         # 检查是否撞到自己
         if snake.get_head_position() in snake.positions[1:]:
-            game_over_text = font.render('游戏结束!', True, WHITE)
-            screen.blit(game_over_text, (WIDTH // 2 - 50, HEIGHT // 2 - 18))
-            pygame.display.update()
-            pygame.time.wait(2000)
-            pygame.quit()
-            sys.exit()
+            break
 
-        clock.tick(SNAKE_SPEED)
+        clock.tick(snake_speed)
+
+    game_over_text = font.render('游戏结束!', True, WHITE)
+    screen.blit(game_over_text, (WIDTH // 2 - 50, HEIGHT // 2 - 18))
+    pygame.display.update()
+    pygame.time.wait(2000)
+    pygame.quit()
+    sys.exit()
 
 if __name__ == '__main__':
     main()
